@@ -20,5 +20,3 @@ This system is designed to automatically shuffle questions and answers in exams.
 
 ---
 
-**הערה:** יש לוודא ששם התיקייה הוא `main` וששם הקובץ הוא `index.html`.  
-**Note:** Ensure that the folder name is `main` and the file name is `index.html`.
