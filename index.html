@@ -59,6 +59,8 @@
             margin-bottom: 20px;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.21.0/docxtemplater.js"></script>
 </head>
 <body>
     <div class="input-section">
@@ -75,8 +77,8 @@
             <button onclick="shuffleQuestions()">ערבל שאלות</button>
             <button onclick="shuffleAnswers()">ערבל תשובות</button>
             <button onclick="shuffleBoth()">ערבל הכל</button>
-            <button onclick="copyExamToClipboard()">העתק מבחן</button>
-            <button onclick="copyAnswersToClipboard()">העתק מפתח תשובות</button>
+            <button onclick="exportToFile()">ייצא לקובץ טקסט</button>
+            <button onclick="exportToWord()">ייצא לקובץ וורד</button>
         </div>
     </div>
 
@@ -197,40 +199,79 @@
             answerKey.innerHTML = answerKeyHtml;
         }
 
-        function copyExamToClipboard() {
+        function exportToFile() {
             if (examData.length === 0) {
-                alert('אין נתונים להעתקה');
+                alert('אנא הכנס שאלות תחילה');
                 return;
             }
-            let content = '';
-            examData.forEach((question, index) => {
-                content += `${index + 1}. ${question.question}\n`;
+
+            let content = 'מבחן\n\n';
+            
+            examData.forEach((question, qIndex) => {
+                content += `${qIndex + 1}. ${question.question}\n`;
                 question.answers.forEach((answer, aIndex) => {
-                    content += `   ${letters[aIndex]}. ${answer}\n`;
+                    content += `${letters[aIndex]}. ${answer}\n`;
                 });
+                content += '\n';
             });
-            copyToClipboard(content, 'המבחן הועתק בהצלחה!');
+
+            content += '\nמפתח תשובות:\n';
+            examData.forEach((question, qIndex) => {
+                const correctAnswerIndex = question.answers.findIndex(answer => answer === question.correctAnswer);
+                content += `${qIndex + 1}. ${letters[correctAnswerIndex]}\n`;
+            });
+
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'מבחן_' + new Date().toISOString().slice(0,10) + '.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
         }
 
-        function copyAnswersToClipboard() {
+        function exportToWord() {
             if (examData.length === 0) {
-                alert('אין נתונים להעתקה');
+                alert('אנא הכנס שאלות תחילה');
                 return;
             }
-            let content = 'מפתח תשובות:\n';
-            examData.forEach((question, index) => {
-                const correctIndex = question.answers.indexOf(question.correctAnswer);
-                content += `${index + 1}. ${letters[correctIndex]}\n`;
-            });
-            copyToClipboard(content, 'מפתח התשובות הועתק בהצלחה!');
-        }
 
-        function copyToClipboard(content, successMessage) {
-            navigator.clipboard.writeText(content).then(() => {
-                alert(successMessage);
-            }).catch(err => {
-                alert('שגיאה בהעתקה ללוח.');
-                console.error(err);
+            const doc = new docx.Document({
+                sections: [{
+                    properties: {},
+                    children: [
+                        new docx.Paragraph({
+                            text: "המבחן",
+                            heading: docx.HeadingLevel.HEADING_1,
+                        }),
+                        ...examData.map((question, qIndex) => {
+                            const answersParagraphs = question.answers.map((answer, aIndex) => {
+                                return new docx.Paragraph({
+                                    text: `${letters[aIndex]}. ${answer}`,
+                                });
+                            });
+
+                            return new docx.Paragraph({
+                                text: `${qIndex + 1}. ${question.question}`,
+                            }).children.concat(answersParagraphs);
+                        }),
+                        new docx.Paragraph({
+                            text: "מפתח תשובות",
+                            heading: docx.HeadingLevel.HEADING_1,
+                        }),
+                        ...examData.map((question, qIndex) => {
+                            const correctAnswerIndex = question.answers.findIndex(answer => answer === question.correctAnswer);
+                            return new docx.Paragraph({
+                                text: `${qIndex + 1}. ${letters[correctAnswerIndex]}`,
+                            });
+                        }),
+                    ],
+                }],
+            });
+
+            docx.Packer.toBlob(doc).then((blob) => {
+                saveAs(blob, 'מבחן_' + new Date().toISOString().slice(0, 10) + '.docx');
             });
         }
     </script>
