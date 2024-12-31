@@ -8,6 +8,7 @@
             font-family: Arial, sans-serif;
             margin: 20px;
             background-color: #f0f0f0;
+            direction: rtl;
         }
         .question {
             margin-bottom: 20px;
@@ -36,6 +37,7 @@
         }
         table {
             border-collapse: collapse;
+            width: 100%;
             margin-top: 20px;
             background-color: white;
         }
@@ -44,40 +46,40 @@
             padding: 8px;
             text-align: center;
         }
-        #answerKey {
-            margin-top: 20px;
-        }
         #inputArea {
             width: 100%;
             height: 300px;
             margin-bottom: 10px;
             direction: rtl;
-            font-family: Arial, sans-serif;
             padding: 10px;
-        }
-        .input-section {
-            margin-bottom: 20px;
+            font-family: Arial, sans-serif;
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
 </head>
 <body>
+    <h2>מערכת בחינות</h2>
+    
     <div class="input-section">
-        <h3>הכנס את שאלות המבחן:</h3>
-        <textarea id="inputArea" placeholder='הדבק את השאלות בפורמט הבא:
+        <textarea id="inputArea" placeholder="הדבק את השאלות בפורמט הבא:
 
 1. שאלה ראשונה
 א. תשובה ראשונה
 ב. תשובה שנייה
 ג. תשובה שלישית
-ד. תשובה רביעית'></textarea>
+ד. תשובה רביעית
+
+2. שאלה שנייה
+א. תשובה ראשונה
+ב. תשובה שנייה
+ג. תשובה שלישית
+ד. תשובה רביעית"></textarea>
+        
         <div class="controls">
             <button onclick="loadFromText()">טען שאלות</button>
-            <button onclick="shuffleQuestions()">ערבל שאלות</button>
-            <button onclick="shuffleAnswers()">ערבל תשובות</button>
-            <button onclick="shuffleBoth()">ערבל הכל</button>
-            <button onclick="exportToFile()">ייצא לקובץ טקסט</button>
-            <button onclick="copyToClipboard()">העתק לפורמט וורד</button>
+            <button onclick="shuffleQuestions()">ערבב שאלות</button>
+            <button onclick="shuffleAnswers()">ערבב תשובות</button>
+            <button onclick="exportToWord()">ייצא לוורד</button>
+            <button onclick="exportToText()">ייצא לטקסט</button>
         </div>
     </div>
 
@@ -89,8 +91,7 @@
         const letters = ['א', 'ב', 'ג', 'ד'];
 
         function parseText(text) {
-            const cleanText = text.trim();
-            const questions = cleanText.split(/\d+\./).filter(q => q.trim());
+            const questions = text.trim().split(/\d+\./).filter(q => q.trim());
             
             return questions.map(questionBlock => {
                 const lines = questionBlock.trim().split('\n');
@@ -105,7 +106,7 @@
                     return {
                         question: questionText,
                         answers: answers,
-                        correctAnswer: answers[0] // שמירת התשובה הנכונה המקורית
+                        correctAnswer: answers[0]
                     };
                 }
                 return null;
@@ -119,10 +120,9 @@
                 if (examData.length === 0) {
                     throw new Error('לא נמצאו שאלות בפורמט תקין');
                 }
-                displayExam(examData);
+                displayExam();
             } catch (error) {
                 alert('שגיאה בטעינת השאלות. אנא ודא שהפורמט תקין ונסה שוב.');
-                console.error(error);
             }
         }
 
@@ -140,7 +140,7 @@
                 return;
             }
             examData = shuffleArray([...examData]);
-            displayExam(examData);
+            displayExam();
         }
 
         function shuffleAnswers() {
@@ -148,49 +148,42 @@
                 alert('אנא הכנס שאלות תחילה');
                 return;
             }
-            const newExamData = examData.map(question => {
-                const answers = [...question.answers];
-                const shuffledAnswers = shuffleArray(answers);
-                return { 
-                    ...question, 
-                    answers: shuffledAnswers
+            examData = examData.map(question => {
+                const originalCorrect = question.correctAnswer;
+                const answers = shuffleArray([...question.answers]);
+                return {
+                    question: question.question,
+                    answers: answers,
+                    correctAnswer: originalCorrect
                 };
             });
-            examData = newExamData;
-            displayExam(examData);
+            displayExam();
         }
 
-        function shuffleBoth() {
-            if (examData.length === 0) {
-                alert('אנא הכנס שאלות תחילה');
-                return;
-            }
-            shuffleQuestions();
-            shuffleAnswers();
-        }
-
-        function displayExam(data) {
+        function displayExam() {
             const examContent = document.getElementById('examContent');
             const answerKey = document.getElementById('answerKey');
+            
             let examHtml = '<h3>המבחן:</h3>';
             let answerKeyHtml = '<h3>מפתח תשובות</h3><table><tr><th>מספר שאלה</th><th>תשובה נכונה</th></tr>';
 
-            data.forEach((question, qIndex) => {
-                examHtml += `<div class="question">
-                    <div>${qIndex + 1}. ${question.question}</div>
-                    <div class="answers">`;
+            examData.forEach((question, qIndex) => {
+                examHtml += `
+                    <div class="question">
+                        <div>${qIndex + 1}. ${question.question}</div>
+                        <div class="answers">
+                `;
                 
-                let correctAnswerLetter = '';
+                let correctLetter = '';
                 question.answers.forEach((answer, aIndex) => {
                     examHtml += `<div>${letters[aIndex]}. ${answer}</div>`;
-                    
                     if (answer === question.correctAnswer) {
-                        correctAnswerLetter = letters[aIndex];
+                        correctLetter = letters[aIndex];
                     }
                 });
                 
                 examHtml += '</div></div>';
-                answerKeyHtml += `<tr><td>${qIndex + 1}</td><td>${correctAnswerLetter}</td></tr>`;
+                answerKeyHtml += `<tr><td>${qIndex + 1}</td><td>${correctLetter}</td></tr>`;
             });
 
             answerKeyHtml += '</table>';
@@ -198,7 +191,52 @@
             answerKey.innerHTML = answerKeyHtml;
         }
 
-        function exportToFile() {
+        function exportToWord() {
+            if (examData.length === 0) {
+                alert('אנא הכנס שאלות תחילה');
+                return;
+            }
+
+            let content = `<html dir="rtl">
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: Arial, sans-serif; direction: rtl; }
+                        .question { margin-bottom: 1em; }
+                        .answer { margin-right: 2em; }
+                    </style>
+                </head>
+                <body>
+                    <h1>מבחן</h1>`;
+
+            examData.forEach((question, qIndex) => {
+                content += `
+                    <div class="question">
+                        <p><strong>${qIndex + 1}. ${question.question}</strong></p>`;
+                
+                question.answers.forEach((answer, aIndex) => {
+                    content += `<p class="answer">${letters[aIndex]}. ${answer}</p>`;
+                });
+                
+                content += '</div>';
+            });
+
+            content += '<div style="page-break-before: always;"><h2>מפתח תשובות</h2>';
+            examData.forEach((question, qIndex) => {
+                const correctIndex = question.answers.findIndex(a => a === question.correctAnswer);
+                content += `<p>${qIndex + 1}. ${letters[correctIndex]}</p>`;
+            });
+            content += '</div></body></html>';
+
+            const blob = new Blob([content], { type: 'application/msword' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'מבחן.doc';
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+
+        function exportToText() {
             if (examData.length === 0) {
                 alert('אנא הכנס שאלות תחילה');
                 return;
@@ -216,52 +254,16 @@
 
             content += '\nמפתח תשובות:\n';
             examData.forEach((question, qIndex) => {
-                const correctAnswerIndex = question.answers.findIndex(answer => answer === question.correctAnswer);
-                content += `${qIndex + 1}. ${letters[correctAnswerIndex]}\n`;
+                const correctIndex = question.answers.findIndex(a => a === question.correctAnswer);
+                content += `${qIndex + 1}. ${letters[correctIndex]}\n`;
             });
 
             const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = 'מבחן_' + new Date().toISOString().slice(0,10) + '.txt';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(a.href);
-        }
-
-        function copyToClipboard() {
-            if (examData.length === 0) {
-                alert('אנא הכנס שאלות תחילה');
-                return;
-            }
-
-            let wordContent = '<div style="direction: rtl; font-family: Arial, sans-serif;">';
-
-            wordContent += '<h3>המבחן:</h3>';
-            examData.forEach((question, qIndex) => {
-                wordContent += `<p><strong>${qIndex + 1}. ${question.question}</strong></p>`;
-                question.answers.forEach((answer, aIndex) => {
-                    wordContent += `<p>${letters[aIndex]}. ${answer}</p>`;
-                });
-            });
-
-            wordContent += '<h3>מפתח תשובות:</h3>';
-            examData.forEach((question, qIndex) => {
-                const correctAnswerIndex = question.answers.findIndex(answer => answer === question.correctAnswer);
-                wordContent += `<p>${qIndex + 1}. ${letters[correctAnswerIndex]}</p>`;
-            });
-
-            wordContent += '</div>';
-
-            const textArea = document.createElement('textarea');
-            textArea.value = wordContent;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textArea);
-
-            alert('הטקסט הועתק לפורמט וורד!');
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'מבחן.txt';
+            link.click();
+            URL.revokeObjectURL(link.href);
         }
     </script>
 </body>
